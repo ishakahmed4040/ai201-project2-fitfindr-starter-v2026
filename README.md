@@ -121,25 +121,51 @@ result becomes `selected_item`; that item and `wardrobe` produce
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'vintage graphic tee under $30'
+
+  Found:    Graphic Tee — 2003 Tour Bootleg Style — $24.0 on depop
+
+  Outfit:   Pair the Graphic Tee — 2003 Tour Bootleg Style with Baggy
+  straight-leg jeans, dark wash and Black combat boots for a relaxed grunge
+  look. Add the Vintage black denim jacket for another textured layer.
+
+  Fit card: Found this Graphic Tee — 2003 Tour Bootleg Style for $24.00 on
+  depop. I’m pairing it with baggy dark-wash jeans, black combat boots, and the
+  cropped vintage denim jacket for an easy grunge-streetwear vibe. The faded
+  graphic does all the work.
+
+2 model calls this session
 
 ```
 
 **The three tools, tested one at a time**
 
 ```
-$ python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
+$ python -c "from tools import search_listings; print([(x['title'], x['price'], x['size'], x['platform']) for x in search_listings('graphic tee', max_price=30)])"
 
+[('Graphic Tee — 2003 Tour Bootleg Style', 24.0, 'L', 'depop'),
+ ('Y2K Baby Tee — Butterfly Print', 18.0, 'S/M', 'depop'),
+ ('Vintage Band Tee — Faded Grey', 19.0, 'L', 'depop'),
+ ('Vintage Graphic Hoodie — Faded Black', 26.0, 'L', 'depop'),
+ ('Mesh Long-Sleeve Top — Black', 15.0, 'S/M', 'depop'),
+ ('Low-Rise Cargo Pants — Khaki', 27.0, 'W29', 'poshmark')]
 ```
 
 ```
-$ python -c "from tools import suggest_outfit; ..."
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[5], get_example_wardrobe()))"
 
+Pair the Graphic Tee — 2003 Tour Bootleg Style with Baggy straight-leg jeans,
+dark wash and Black combat boots for a relaxed grunge look. Add the Vintage
+black denim jacket for another textured layer.
 ```
 
 ```
-$ python -c "from tools import create_fit_card; ..."
+$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('Baggy jeans and black combat boots.', load_listings()[5]))"
 
+Found this Graphic Tee — 2003 Tour Bootleg Style for $24.00 on depop. I’m
+pairing it with baggy dark-wash jeans, black combat boots, and the cropped
+vintage denim jacket for an easy grunge-streetwear vibe. The faded graphic does
+all the work.
 ```
 
 ---
@@ -155,15 +181,21 @@ $ python -c "from tools import create_fit_card; ..."
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Codex to test whether each acceptance criterion
+  could be checked using only the words in the criterion.
+- *What came back:* It pointed out that my state criterion needed to compare a
+  concrete identifier at both sides of the tool boundary.
+- *What I changed:* I made criterion 3 compare the first search result's ID,
+  `session["selected_item"]["id"]`, and the ID passed to `suggest_outfit`.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Codex to check my planned size-matching rule for
+  edge cases in the provided listing data.
+- *What came back:* It showed that substring matching would treat `S` as part
+  of `US 9` and `L` as part of `XL`.
+- *What I changed:* I split both size values into complete tokens and compare
+  those tokens, while still allowing `M` to match combined sizes such as `S/M`.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
