@@ -13,7 +13,9 @@ Build and test your three tools in `tools.py` first. Then come here.
     python agent.py          runs both example paths below
 """
 
-import config
+import re
+
+import config  # noqa: F401 — imported so every entry point loads shared settings
 import trace
 from tools import search_listings, suggest_outfit, create_fit_card
 from generate import ModelUnavailable
@@ -48,6 +50,33 @@ def new_session(query: str, wardrobe: dict) -> dict:
 
 
 # ── planning loop ─────────────────────────────────────────────────────────────
+
+def _parse_query(query: str) -> dict:
+    """Extract supported filters and leave remaining words as the description."""
+    price_match = re.search(
+        r"\b(?:under|below|up\s+to|max(?:imum)?(?:\s+price)?(?:\s+of)?)"
+        r"\s*\$?\s*(\d+(?:\.\d{1,2})?)\b",
+        query,
+        flags=re.IGNORECASE,
+    )
+    size_match = re.search(
+        r"\b(?:in\s+)?size\s+([a-z]{1,3}(?:\s*\d+(?:\.\d+)?)?|\d+(?:\.\d+)?)\b",
+        query,
+        flags=re.IGNORECASE,
+    )
+
+    description = query
+    for match in (price_match, size_match):
+        if match:
+            description = description.replace(match.group(0), " ")
+    description = re.sub(r"[,;]+", " ", description)
+    description = re.sub(r"\s+", " ", description).strip(" .")
+
+    return {
+        "description": description,
+        "size": size_match.group(1).upper() if size_match else None,
+        "max_price": float(price_match.group(1)) if price_match else None,
+    }
 
 def run_agent(query: str, wardrobe: dict) -> dict:
     """
@@ -106,9 +135,47 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         than a stack trace. The import is already at the top of this file.
     """
     session = new_session(query, wardrobe)
+    session["parsed"] = _parse_query(session["query"])
+    next_step = "search"
+    iterations = 0
 
-    # TODO: delete these two lines and build the loop.
-    session["error"] = "The planning loop isn't built yet — see the TODO in agent.py."
+    while next_step:
+        iterations += 1
+        trace.check_iterations(iterations)
+
+        if next_step == "search":
+            parsed = session["parsed"]
+            session["search_results"] = search_listings(
+                parsed["description"],
+                parsed["size"],
+                parsed["max_price"],
+            )
+            if not session["search_results"]:
+                session["error"] = (
+                    "No listings matched. Try a larger budget, another size, "
+                    "or fewer description words."
+                )
+                return session
+            session["selected_item"] = session["search_results"][0]
+            next_step = "suggest_outfit"
+
+        elif next_step == "suggest_outfit":
+            session["outfit_suggestion"] = suggest_outfit(
+                session["selected_item"],
+                session["wardrobe"],
+            )
+            next_step = "create_fit_card"
+
+        elif next_step == "create_fit_card":
+            session["fit_card"] = create_fit_card(
+                session["outfit_suggestion"],
+                session["selected_item"],
+            )
+            next_step = None
+
+        else:
+            raise RuntimeError(f"Unknown planning step: {next_step}")
+
     return session
 
 
