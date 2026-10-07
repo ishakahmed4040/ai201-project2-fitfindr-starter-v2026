@@ -38,7 +38,10 @@
 <!-- ═══════════════════════ UNIT 3 — THE BUILD ═══════════════════════ -->
 
 ## What This Does
-
+FitFindr takes a plain-language request for a thrift item, including an optional
+size and maximum price. It searches a local listings collection and selects the
+best keyword match. It then combines that item with pieces in the user's
+wardrobe and returns an outfit suggestion plus a short, post-ready fit card.
 <!-- Three or four sentences: what a user asks for, and what they get back. -->
 
 
@@ -59,24 +62,24 @@
 
 ### `search_listings`
 
-- **What it does:**
-- **Inputs:** <!-- name and type each: `max_price` (float), not "a price" -->
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Filters local thrift listings and ranks them by keyword overlap.
+- **Inputs:** `description` (`str`), `size` (`str | None`), and `max_price` (`float | None`).
+- **Returns:** A list of at most 10 listing dictionaries, best match first. Each dictionary includes `id`, `title`, `description`, `category`, `style_tags`, `size`, `condition`, `price`, `colors`, `brand`, and `platform`.
+- **When it has nothing:** Returns an empty list.
 
 ### `suggest_outfit`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Uses the selected listing and saved wardrobe to suggest one or two outfits.
+- **Inputs:** `new_item` (`dict`) and `wardrobe` (`dict` with an `items` list).
+- **Returns:** A non-empty string containing specific outfit ideas that name saved wardrobe pieces.
+- **When it has nothing:** If the wardrobe is empty, returns general styling advice for the new item instead of failing.
 
 ### `create_fit_card`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Turns the selected listing and outfit suggestion into a social caption.
+- **Inputs:** `outfit` (`str`) and `new_item` (`dict`).
+- **Returns:** A two-to-four-sentence string naming the item, price, platform, and outfit vibe.
+- **When it has nothing:** If `outfit` is empty or whitespace, returns a descriptive message explaining that a fit card cannot be created.
 
 ---
 
@@ -93,13 +96,18 @@
      The grader checks your code against what you claim here, so the file and
      function have to be real. -->
 
-**Branch rule:**
+**Branch rule:** If `search_listings` returns an empty list, store a message that
+names filters the user can change and stop. Otherwise, select the first result,
+pass it through session state to `suggest_outfit`, then call `create_fit_card`.
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+**How the query is parsed:** Regular expressions extract `under $PRICE` and
+`size SIZE`; the remaining cleaned words become the description.
 
-**What moves through the session:** <!-- which fields, in what order -->
+**What moves through the session:** `parsed` feeds `search_results`; the first
+result becomes `selected_item`; that item and `wardrobe` produce
+`outfit_suggestion`; the outfit and same selected item produce `fit_card`.
 
 ---
 

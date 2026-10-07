@@ -25,9 +25,8 @@ Given a query that matches at least one listing, the agent completes all three
 tool calls and returns a fit card — in at least 4 of 5 tries.
 
 **Why this target:**
-<!-- Why 4 of 5 and not 5 of 5? Something about your search, probably —
-     "my search is a plain keyword match and some phrasings will miss" is a
-     real answer. -->
+I chose 4 of 5 because the search uses keyword overlap instead of a model, so
+an unusual phrasing can miss a listing even when a person sees the connection.
 
 ---
 
@@ -37,65 +36,52 @@ Given a query that matches no listings, the agent stops before calling
 `suggest_outfit` and returns a message naming what to change — 5 of 5 tries.
 
 **Why this target:**
-<!-- Why is 5 of 5 reasonable here when criterion 1 isn't? What's different
-     about this path? -->
+I chose 5 of 5 because this branch checks a deterministic empty list. It should
+never send `None` or a made-up item to the next tool.
 
 ---
 
-## 3. Something about state
+## 3. The selected listing stays the same across tools
 
-<!-- YOU WRITE THIS ONE.
-
-     How would you know that the item your search found is the same item the
-     next tool received? Name something countable or observable.
-
-     This is the criterion people find hardest, because state failure doesn't
-     look like state failure — it looks like a tool problem. Something that
-     compares session["selected_item"] against what actually reached
-     suggest_outfit is the shape you're after. -->
+For five matching queries, `session["selected_item"]["id"]` equals the first
+search result's ID and the `new_item` passed to `suggest_outfit` has that same
+ID — 5 of 5 tries.
 
 
 
 **Why this target:**
-
-
-
----
-
-## 4. Something about the fit card
-
-<!-- YOU WRITE THIS ONE.
-
-     The fit card calls a model, so the same input can produce different words
-     each time. That's not a bug — it's the nature of the tool. So what would
-     make it acceptable?
-
-     Think about what you'd actually be unhappy to see. A caption that never
-     mentions the price? Two different items producing the same opening
-     sentence? A card longer than a caption anyone would post? Any of those can
-     be turned into a number. -->
-
-
-
-**Why this target:**
-
+I chose 5 of 5 because the planning loop copies this value through session
+state. No model judgment or random output is involved.
 
 
 ---
 
-## 5. Your choice
+## 4. The fit card includes useful listing details
 
-<!-- YOU WRITE THIS ONE TOO.
-
-     Pick something you actually care about getting right. Speed, the empty
-     wardrobe path, what happens when the model can't be reached, whether the
-     search respects a price ceiling — anything, as long as it names a number
-     or an observable outcome. -->
+For five matching queries, the fit card is two to four sentences and mentions
+the selected item's title, price, and platform — in at least 4 of 5 tries.
 
 
 
 **Why this target:**
+I chose 4 of 5 because the caption comes from a model and wording can vary. A
+single miss is acceptable, but repeated missing details would make the card
+unhelpful.
 
+
+---
+
+## 5. Search respects size and price filters
+
+For five searches that include a size and maximum price, every returned listing
+matches the requested size and costs no more than the maximum — 5 of 5 tries.
+
+
+
+**Why this target:**
+I chose 5 of 5 because size and price filters are deterministic comparisons.
+Returning an unaffordable or wrong-size item would violate the user's explicit
+request.
 
 
 ---
