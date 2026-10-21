@@ -204,6 +204,11 @@ def _record_tokens(response) -> None:
 def _explain(exc: Exception) -> str:
     """Turn a provider exception into something a person can act on."""
     message = str(exc).lower()
+    if "no gemini_api_key found" in message:
+        return (
+            "No GEMINI_API_KEY is configured. Copy .env.example to .env, add "
+            "your key, and try again."
+        )
     if "api key" in message or "api_key" in message or "unauthenticated" in message:
         return (
             "The model rejected your API key. Check GEMINI_API_KEY in your .env "

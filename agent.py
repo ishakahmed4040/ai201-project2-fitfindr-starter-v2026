@@ -192,10 +192,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
                     session["wardrobe"],
                 )
             except ModelUnavailable as exc:
-                session["error"] = (
-                    "The styling model is unavailable. Check GEMINI_API_KEY in "
-                    ".env and your internet connection, then try again. " + str(exc)
-                )
+                session["error"] = f"The styling model is unavailable. {exc}"
                 trace.step(
                     "suggest_outfit",
                     inputs=outfit_inputs,
@@ -226,10 +223,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
                     session["selected_item"],
                 )
             except ModelUnavailable as exc:
-                session["error"] = (
-                    "The caption model is unavailable. Check GEMINI_API_KEY in "
-                    ".env and your internet connection, then try again. " + str(exc)
-                )
+                session["error"] = f"The caption model is unavailable. {exc}"
                 trace.step(
                     "create_fit_card",
                     inputs=card_inputs,

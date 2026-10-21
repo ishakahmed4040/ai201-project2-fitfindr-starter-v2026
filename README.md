@@ -197,6 +197,16 @@ all the work.
 - *What I changed:* I split both size values into complete tokens and compare
   those tokens, while still allowing `M` to match combined sizes such as `S/M`.
 
+**Moment 3**
+
+- *What I asked for:* I asked Codex to argue against my Unit 4 verdicts using
+  the five recorded tries and the original targets.
+- *What came back:* It could not support marking criteria 1 or 4 as met because
+  every run lacked a fit card, even though search and state still worked.
+- *What I changed:* I kept both verdicts as MISSED and diagnosed their shared
+  cause at the `suggest_outfit` model call instead of blaming search or session
+  state.
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.
@@ -372,21 +382,31 @@ trace label changed.
 
      `python run_eval.py --label after` -->
 
-**What I changed:**
+**What I changed:** I changed model-error classification in `generate.py` and
+the handler text in `agent.py`. A missing key now says no key is configured and
+gives the exact `.env` recovery step. It no longer claims the provider rejected
+a key that does not exist.
 
-**Which failure it was meant to fix:**
+**Which failure it was meant to fix:** The baseline's model-unavailable message
+identified the wrong mechanism: “The model rejected your API key.” The trace
+showed that this environment had no key at all.
 
 ### Run Log — After
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Full three-tool run returns a fit card | 4 of 5 | FAIL | FAIL | FAIL | FAIL | FAIL | MISSED (0/5) |
+| 2. Empty search stops before tool 2 | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. Selected item stays the same across tools | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card has title, price, platform, and 2–4 sentences | 4 of 5 | FAIL | FAIL | FAIL | FAIL | FAIL | MISSED (0/5) |
+| 5. Search respects size and maximum price | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Did it help, and how do I know:**
+**Did it help, and how do I know:** It improved the failure message in all five
+model-dependent tries. Before: “The model rejected your API key.” After: “No
+GEMINI_API_KEY is configured. Copy .env.example to .env, add your key, and try
+again.” Acceptance counts did not change because message quality cannot replace
+the missing model. The after evidence is
+`results/run_2026-10-21_1953_after.md`, produced by `run_eval.py::main`.
 
 <!-- If it made things worse, say that. Honestly reported, that earns full
      credit and is more interesting than one that worked. -->
@@ -396,7 +416,16 @@ trace label changed.
 ---
 
 ## What's Still Broken
+Criteria 1 and 4 remain missed because this checkout has no `GEMINI_API_KEY`.
+I would add the key to ignored `.env`, run `python test.py`, then rerun
+`python run_eval.py --label after-key` to measure real outfit and fit-card
+outputs. I stopped because inventing model output or committing a secret would
+make the evidence invalid.
 
+The empty-wardrobe branch reached `suggest_outfit` with zero wardrobe items,
+but the same missing key prevented general advice from being generated. A full
+three-tool happy-path trace is therefore also still missing; the committed
+trace honestly shows the exact stopping point.
 <!-- For each criterion still missed: what you'd do, and why you stopped where
      you did. "I ran out of time" is fine if it's true. Pretending nothing is
      left is not. -->
