@@ -17,7 +17,7 @@ import re
 
 import config  # noqa: F401 — imported so every entry point loads shared settings
 import trace
-from mcp_client import call_tool
+from mcp_client import MCPError, call_tool
 from tools import suggest_outfit, create_fit_card
 from generate import ModelUnavailable
 
@@ -146,7 +146,31 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
         if next_step == "search":
             parsed = session["parsed"]
-            session["search_results"] = call_tool("search_listings", parsed)
+            try:
+                session["search_results"] = call_tool("search_listings", parsed)
+            except MCPError as exc:
+                session["error"] = (
+                    "Listing search is unavailable. Check that mcp_server.py runs, "
+                    "then try again. " + str(exc).splitlines()[0]
+                )
+                trace.step(
+                    "search_listings (via MCP)",
+                    inputs=parsed,
+                    returned=session["error"],
+                    note="tool failed; stopping",
+                )
+                return session
+
+            trace.step(
+                "search_listings (via MCP)",
+                inputs=parsed,
+                returned=session["search_results"],
+                note=(
+                    "branch: matches found; continue"
+                    if session["search_results"]
+                    else "branch: empty; stopping"
+                ),
+            )
             if not session["search_results"]:
                 session["error"] = (
                     "No listings matched. Try a larger budget, another size, "
@@ -157,16 +181,67 @@ def run_agent(query: str, wardrobe: dict) -> dict:
             next_step = "suggest_outfit"
 
         elif next_step == "suggest_outfit":
-            session["outfit_suggestion"] = suggest_outfit(
-                session["selected_item"],
-                session["wardrobe"],
+            outfit_inputs = {
+                "new_item_id": session["selected_item"]["id"],
+                "new_item_title": session["selected_item"]["title"],
+                "wardrobe_items": len(session["wardrobe"].get("items", [])),
+            }
+            try:
+                session["outfit_suggestion"] = suggest_outfit(
+                    session["selected_item"],
+                    session["wardrobe"],
+                )
+            except ModelUnavailable as exc:
+                session["error"] = (
+                    "The styling model is unavailable. Check GEMINI_API_KEY in "
+                    ".env and your internet connection, then try again. " + str(exc)
+                )
+                trace.step(
+                    "suggest_outfit",
+                    inputs=outfit_inputs,
+                    returned=session["error"],
+                    note="model unavailable; stopping",
+                )
+                return session
+            trace.step(
+                "suggest_outfit",
+                inputs=outfit_inputs,
+                returned=session["outfit_suggestion"],
+                note=(
+                    "empty wardrobe: returned general advice"
+                    if not session["wardrobe"].get("items")
+                    else "used saved wardrobe"
+                ),
             )
             next_step = "create_fit_card"
 
         elif next_step == "create_fit_card":
-            session["fit_card"] = create_fit_card(
-                session["outfit_suggestion"],
-                session["selected_item"],
+            card_inputs = {
+                "outfit": session["outfit_suggestion"],
+                "new_item_id": session["selected_item"]["id"],
+            }
+            try:
+                session["fit_card"] = create_fit_card(
+                    session["outfit_suggestion"],
+                    session["selected_item"],
+                )
+            except ModelUnavailable as exc:
+                session["error"] = (
+                    "The caption model is unavailable. Check GEMINI_API_KEY in "
+                    ".env and your internet connection, then try again. " + str(exc)
+                )
+                trace.step(
+                    "create_fit_card",
+                    inputs=card_inputs,
+                    returned=session["error"],
+                    note="model unavailable; stopping",
+                )
+                return session
+            trace.step(
+                "create_fit_card",
+                inputs=card_inputs,
+                returned=session["fit_card"],
+                note="fit card ready",
             )
             next_step = None
 

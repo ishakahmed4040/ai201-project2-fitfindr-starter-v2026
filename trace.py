@@ -29,13 +29,15 @@ import config
 
 _lines: list[str] = []
 _step_number = 0
+_enabled = False
 
 
 def start_trace() -> None:
     """Clear the trace. Call this at the start of each run."""
-    global _step_number
+    global _step_number, _enabled
     _lines.clear()
     _step_number = 0
+    _enabled = True
 
 
 def step(name: str, inputs=None, returned=None, note: str = "") -> None:
@@ -49,6 +51,9 @@ def step(name: str, inputs=None, returned=None, note: str = "") -> None:
                   list of listings is fine.
         note:     an optional word on why, e.g. "branch: empty, stopping".
     """
+    if not _enabled:
+        return
+
     global _step_number
     _step_number += 1
 
@@ -84,8 +89,8 @@ def _short(value, limit: int = 110) -> str:
     if isinstance(value, dict):
         if "title" in value:
             return f"{value.get('title')} (${value.get('price')}, {value.get('platform')})"
-        keys = ", ".join(list(value)[:6])
-        return f"dict with keys: {keys}"
+        text = ", ".join(f"{key}={item!r}" for key, item in list(value.items())[:6])
+        return text if len(text) <= limit else text[:limit] + "…"
 
     text = str(value).replace("\n", " ")
     return text if len(text) <= limit else text[:limit] + "…"
