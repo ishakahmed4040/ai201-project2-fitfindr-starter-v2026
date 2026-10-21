@@ -217,17 +217,55 @@ all the work.
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Full three-tool run returns a fit card | 4 of 5 | FAIL | FAIL | FAIL | FAIL | FAIL | MISSED (0/5) |
+| 2. Empty search stops before tool 2 | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. Selected item stays the same across tools | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card has title, price, platform, and 2–4 sentences | 4 of 5 | FAIL | FAIL | FAIL | FAIL | FAIL | MISSED (0/5) |
+| 5. Search respects size and maximum price | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
 **Real output from one try**, pasted as text, naming the file and function
 that produced it:
 
-```
+Produced by `run_eval.py::main` in
+`results/run_2026-10-21_1952_before.md`; each session came from
+`agent.py::run_agent`.
 
+```text
+Criterion 1, try 1
+selected_item: lst_006 | Graphic Tee — 2003 Tour Bootleg Style
+search_results: 10
+[1] search_listings (via MCP)
+      in:  description='vintage graphic tee', size=None, max_price=30.0
+      out: 10 items: lst_006: Graphic Tee — 2003 Tour Bootleg Style, ...
+      →    branch: matches found; continue
+[2] suggest_outfit
+      in:  new_item_id='lst_006', wardrobe_items=10
+      out: The styling model is unavailable. Check GEMINI_API_KEY in .env...
+      →    model unavailable; stopping
+
+Criterion 2, try 1
+[1] search_listings (via MCP)
+      in:  description='designer ballgown', size='XXS', max_price=5.0
+      out: [] (empty)
+      →    branch: empty; stopping
+error: No listings matched. Try a larger budget, another size, or fewer
+description words.
+
+Criterion 3, try 1
+selected_item: lst_004 | 90s Track Jacket — Navy/White Stripe
+[1] search_listings (via MCP)
+      out: 3 items: lst_004: 90s Track Jacket — Navy/White Stripe, ...
+[2] suggest_outfit
+      in:  new_item_id='lst_004', wardrobe_items=10
+
+Criterion 4, try 1
+selected_item: lst_013 | 90s Silk Slip Dress — Floral, Midi Length
+fit_card: (none; styling model unavailable before create_fit_card)
+
+Criterion 5, try 1
+[1] search_listings (via MCP)
+      in:  description='graphic tee', size='L', max_price=25.0
+      out: lst_006 (size L, $24.0), lst_033 (size L, $19.0)
 ```
 
 ---
