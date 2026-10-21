@@ -290,14 +290,25 @@ Criterion 5, try 1
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | Full three-tool run returns a fit card | 4 of 5 | MISSED (0/5) | All five runs stopped in `suggest_outfit`, so none reached `create_fit_card`. |
+| 2 | Empty search stops before tool 2 | 5 of 5 | MET (5/5) | All five MCP searches returned `[]`; every run stopped with an actionable message and no selected item. |
+| 3 | Selected item stays the same across tools | 5 of 5 | MET (5/5) | In all five traces, first result `lst_004`, `session["selected_item"]`, and `suggest_outfit` input were `lst_004`. |
+| 4 | Fit card has required details and length | 4 of 5 | MISSED (0/5) | No run produced a fit card, so none could meet the content or length checks. |
+| 5 | Search respects size and maximum price | 5 of 5 | MET (5/5) | Every run returned only `lst_006` (L, $24) and `lst_033` (L, $19), both within size L and $25. |
 
 **Diagnoses**
 
+Criteria 1 and 4 share one failure. The failure occurred in the model-backed
+`suggest_outfit` tool, before `create_fit_card`. `generate.py` could not find a
+`GEMINI_API_KEY`, raised `ModelUnavailable`, and the planning loop stopped with
+an actionable message. Search, MCP transport, branch logic, and session state
+continued to behave as specified. This was an environment/configuration
+failure, not model-output variation or a prompt-quality failure.
+
+The empty-wardrobe diagnostic reached `suggest_outfit` with
+`wardrobe_items=0`, but the missing key prevented the model from returning the
+general advice. The handler correctly reported what broke and told the user to
+add the key and retry.
 
 
 ---
@@ -314,23 +325,42 @@ Criterion 5, try 1
      the same length, your branch isn't working — and this is the fastest way
      anyone will ever find that out. -->
 
-**Happy path**
+**Attempted happy path**
 
+```text
+[1] search_listings (via MCP)
+      in:  description='vintage graphic tee', size=None, max_price=30.0
+      out: 10 items: lst_006: Graphic Tee — 2003 Tour Bootleg Style,
+           lst_033: Vintage Band Tee — Faded Grey,
+           lst_015: Vintage Graphic Hoodie — Faded Black … +7 more
+      →    branch: matches found; continue
+[2] suggest_outfit
+      in:  new_item_id='lst_006',
+           new_item_title='Graphic Tee — 2003 Tour Bootleg Style',
+           wardrobe_items=10
+      out: The styling model is unavailable. Check GEMINI_API_KEY in .env
+           and your internet connection, then try again.
+      →    model unavailable; stopping
 ```
 
-```
+This trace is shorter than a successful three-tool run because no API key was
+available. It records the exact stopping point instead of inventing model
+output.
 
 **Empty search**
 
+```text
+[1] search_listings (via MCP)
+      in:  description='designer ballgown', size='XXS', max_price=5.0
+      out: [] (empty)
+      →    branch: empty; stopping
 ```
 
-```
-
-**On the MCP move:** <!-- what changed in your code, and whether anything
-behaved differently afterwards. If the rewire didn't work, say exactly where it
-broke — the error text and the last thing that worked. That earns the point in
-full. -->
-
+**On the MCP move:** `search_listings` is registered in `mcp_server.py`, and
+`agent.py::run_agent` now calls it through `mcp_client.call_tool`. Its native
+return shape remained `list[dict]`; matching queries returned the same ranked
+items and impossible queries still returned `[]`. Only the call boundary and
+trace label changed.
 
 
 ---
